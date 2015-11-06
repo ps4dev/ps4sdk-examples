@@ -11,10 +11,12 @@
 #include <sys/socket.h>
 
 #include <signal.h>
+#include <setjmp.h>
 
 #include <unistd.h>
 
 #include <pthread.h>
+#include <errno.h>
 
 /*
 	__PS4__ is defined in the Makefile
@@ -23,6 +25,7 @@
 */
 #ifdef __PS4__
 #include <kernel.h>
+#include <internal/resolve.h>
 
 FILE *__stdinp;
 FILE **__stdinp_addr;
@@ -73,14 +76,76 @@ void stdIOReset(int stdfd[3], fpos_t stdpos[3])
 	}
 }
 
-void *start_routine(void *arg)
-{
-	while(*(int *)arg == 1)
-	{
-		printf(".");
-		sleep(1);
-	}
+/* Constants */
+enum{ ThreadCount = 32 };
 
+/* Types */
+typedef struct
+{
+	unsigned int id;
+	int *errnoAddress;
+	sigjmp_buf threadJump;
+	pthread_t thread;
+}
+ThreadData;
+
+static ThreadData threadData[ThreadCount];
+
+int ThreadCreate(unsigned int id, void *(*f)(void *))
+{
+	if(id >= ThreadCount)// || threadData[id].id != 0)
+		return 0;
+	printf("ThreadCreate %i %p\n", id, f);
+	fflush(stdout);
+
+	threadData[id].id = id;
+	pthread_create(&threadData[id].thread, NULL, f, &threadData[id]);
+
+	return 1;
+}
+
+void sigsegvHandler(int sig)
+{
+	volatile int i;
+
+	if(sig != SIGSEGV)
+		return;
+
+	//write(1, "SIGSEGV\n", 8);
+	for(i = 0; i < ThreadCount; ++i)
+		if(threadData[i].errnoAddress == &errno)
+			siglongjmp(threadData[i].threadJump, 1);
+}
+
+void *t1(void *data)
+{
+	ThreadData *td = (ThreadData *)data;
+	td->errnoAddress = &errno;
+	printf("t1 %p %p\n", td, &errno);
+	fflush(stdout);
+	if(sigsetjmp(td->threadJump, 1) == 0)
+	{
+		// do
+		*(char *)0x42 = 42;
+	}
+	//while (1);
+	return NULL;
+}
+
+void *t2(void *data)
+{
+	ThreadData *td = (ThreadData *)data;
+	td->errnoAddress = &errno;
+	printf("t2 %p %p\n", td, &errno);
+	fflush(stdout);
+	if(sigsetjmp(td->threadJump, 1) == 0)
+	{
+		// do
+		uint32_t i;
+		for(i = 0; i < (uint32_t) - 1 / 4; ++i)
+			;
+		*(char *)0x42 = 42;
+	}
 	return NULL;
 }
 
@@ -92,11 +157,9 @@ int main(int argc, char **argv)
 {
 	int server, client;
 	struct sockaddr_in serverAddress, clientAddress;
-	char message[256];
+	//char message[256];
 	int stdfd[3];
 	fpos_t stdpos[3];
-
-	pthread_t thread;
 
 	#ifdef __PS4__
 	int libc = sceKernelLoadStartModule("libSceLibcInternal.sprx", 0, NULL, 0, 0, 0);
@@ -136,26 +199,37 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	while(1)
+	//while(1)
 	{
-		volatile int run = 1;
+	retry:
 		client = accept(server, NULL, NULL);
 
 		if(client < 0)
-			continue;
+			goto retry;
+
+		sleep(5);
 
 		stdIORedirect(client, stdfd, stdpos);
 
-		pthread_create(&thread, NULL, start_routine, (void *)&run);
-		scanf("%s", message); // block until input
-		run = 0;
+		struct sigaction action;
 
-		pthread_join(thread, NULL);
+		action.sa_handler = sigsegvHandler;
+		action.sa_flags = 0; // SA_NODEFER; /* repeated throws are caught */
+		sigemptyset(&action.sa_mask);
+		sigaction(SIGSEGV, &action, NULL);
+
+		ThreadCreate(0, t1);
+		ThreadCreate(1, t2);
+
+		pthread_join(threadData[0].thread, NULL);
+		pthread_join(threadData[1].thread, NULL);
 
 		stdIOReset(stdfd, stdpos);
 
 		close(client);
 	}
 
-	//close(server);
+	close(server);
+
+	return 0;
 }
