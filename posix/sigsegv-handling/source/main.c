@@ -84,11 +84,7 @@ void handler(int sig)
 	siglongjmp(jmpbuf, 1);
 }
 
-#ifdef __PS4__
-int64_t _main(void)
-#else
 int main(int argc, char **argv)
-#endif
 {
 	int server, client;
 	struct sockaddr_in serverAddress, clientAddress;

@@ -71,11 +71,7 @@ void stdIOReset(int stdfd[3], fpos_t stdpos[3])
 	}
 }
 
-#ifdef __PS4__
-int64_t _main(void)
-#else
 int main(int argc, char **argv)
-#endif
 {
 	int server, client;
 	struct sockaddr_in serverAddress, clientAddress;

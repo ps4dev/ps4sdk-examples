@@ -87,11 +87,7 @@ void *start_routine(void *arg)
 	return NULL;
 }
 
-#ifdef __PS4__
-int64_t _main(void)
-#else
 int main(int argc, char **argv)
-#endif
 {
 	int server, client;
 	struct sockaddr_in serverAddress, clientAddress;
