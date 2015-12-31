@@ -8,6 +8,6 @@ ifndef LibPS4
 $(error Neither LIBPS4, LibPS4 nor libps4 set)
 endif
 
-target ?= ps4-elf
+target ?= ps4-untargeted
 
 include $(LibPS4)/make/libps4.mk
