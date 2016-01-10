@@ -43,20 +43,20 @@ int main(int argc, char **argv)
 	void *symbol = NULL;
 
 	//ps4Resolve((void *)strcmp); // either this or a call
-	 // we need to resolve (or call) strcmp once or run into an infinite loop on a resolve intercept
+	// we need to resolve (or call) strcmp and printf once or run into an infinite loop on a resolve intercept
 	if(strcmp("foo", "bar") != 0)
 		printf("Start\n");
 
-	ps4Resolve((void *)sceKernelSleep); // handers not called
+	ps4Resolve((void *)sceKernelSleep); // handers not called, fn resolved
 
 	ps4ResolveSetErrorHandler(errorhandler);
 	ps4ResolveSetPreHandler(prehandler);
 	ps4ResolveSetPostHandler(posthandler);
 
-	stat = ps4Resolve((void *)sceKernelUsleep); // handlers called
+	stat = ps4Resolve((void *)sceKernelUsleep); // handlers called, fn resolved
 	printf("%i // should be 0 - resolve of sceKernelUsleep succeeds\n", stat);
 
-	stat = ps4Resolve((void *)main); // check should fail -> nop
+	stat = ps4Resolve((void *)main); // check should fail, nothing resolved
 	printf("%i // should be -14 or so - resolve of main fails (not a libps4 fn)\n", stat);
 
 	// failing symbol lookup
