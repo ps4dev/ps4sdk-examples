@@ -231,6 +231,7 @@ int main(int argc, char **argv)
 	block[442] = 1; // blocks
 	block[455] = 1;
 	block[578] = 1; // kernel crash
+	block[522] = 1; // when run from 0 to 617 - this one hangs ...
  	block[579] = 1; // kernel crash
 
 	#ifdef __PS4__
@@ -288,7 +289,7 @@ int main(int argc, char **argv)
 		syscallNumber = k;
 		pthread_create(&thread, NULL, loopSyscall, (void *)&syscallNumber);
 
-		for(i = 0; i < 4096; ++i)
+		for(i = 0; i < 2 * 1024; ++i)
 		{
 			if(sysctl(name, 4, NULL, &stackCount, NULL, 0) < 0)
 				break;
