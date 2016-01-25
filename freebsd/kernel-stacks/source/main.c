@@ -9,6 +9,7 @@
 #include <signal.h>
 //#include <setjmp.h>
 #include <pthread.h>
+#include <time.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -20,6 +21,7 @@
 
 #ifdef __PS4__
 #include <kernel.h>
+#include <ps4/internal/resolve.h>
 
 __typeof__(__stdoutp) __stdoutp;
 __typeof__(__stdoutp) *__stdoutp_address;
@@ -27,6 +29,12 @@ __typeof__(__mb_sb_limit) __mb_sb_limit;
 __typeof__(__mb_sb_limit) *__mb_sb_limit_address;
 __typeof__(_CurrentRuneLocale) _CurrentRuneLocale;
 __typeof__(_CurrentRuneLocale) *_CurrentRuneLocale_address;
+
+PS4SyscallNamed(syscall0, 0)
+PS4SyscallNamed(syscall198, 198)
+
+int syscall0();
+long syscall198();
 #endif
 
 typedef struct KernelFunction
@@ -73,11 +81,35 @@ int printPrintableBytes(char *str, size_t size)
 	return 0;
 }
 
-void *loopSyscall(void *arg)
+void *loopSyscall0(void *arg)
 {
 	int *syscallNumber = (int *)arg;
 	while(*syscallNumber >= 0)
-		syscall(*syscallNumber, 0, 0, 0, 0, 0);
+		syscall0(*syscallNumber, 0, 0, 0, 0, 0);
+	return NULL;
+}
+
+void *loopSyscall0_rand(void *arg)
+{
+	int *syscallNumber = (int *)arg;
+	while(*syscallNumber >= 0) // rand aint thread safe ... who gives
+		syscall0(*syscallNumber, rand(), rand(), rand(), rand(), rand());
+	return NULL;
+}
+
+void *loopSyscall198(void *arg)
+{
+	int *syscallNumber = (int *)arg;
+	while(*syscallNumber >= 0)
+		syscall198(*syscallNumber, 0, 0, 0, 0, 0);
+	return NULL;
+}
+
+void *loopSyscall198_rand(void *arg)
+{
+	int *syscallNumber = (int *)arg;
+	while(*syscallNumber >= 0)
+		syscall198(*syscallNumber, rand(), rand(), rand(), rand(), rand());
 	return NULL;
 }
 
@@ -156,11 +188,11 @@ void hashKernelFunctionsFromStackTrace(KernelFunction **kernelFunctions, char *t
 int main(int argc, char **argv)
 {
 	//struct sigaction action;
-	pthread_t thread;
+	pthread_t threads[16];
 	struct kinfo_kstack *stacks;
 	size_t stackCount;
 	int name[4];
-	volatile int syscallNumber, i, j, k;
+	volatile int syscallNumber, i, j, k, l;
 	char block[700];
 
 	memset(block, 0, 700);
@@ -234,6 +266,8 @@ int main(int argc, char **argv)
 	block[522] = 1; // when run from 0 to 617 - this one hangs ...
  	block[579] = 1; // kernel crash
 
+	srand(time(NULL));
+
 	#ifdef __PS4__
 	int libc = sceKernelLoadStartModule("libSceLibcInternal.sprx", 0, NULL, 0, 0, 0);
 	sceKernelDlsym(libc, "__stdoutp", (void **)&__stdoutp_address);
@@ -260,7 +294,6 @@ int main(int argc, char **argv)
 	name[2] = KERN_PROC_KSTACK;
 	name[3] = getpid();
 
-	//for(k = 531; k <= 536; ++k)
 	for(k = 0; k <= 617; ++k)
 	//for(k = 531; k <= 617; ++k)
 	{
@@ -287,9 +320,11 @@ int main(int argc, char **argv)
 			printf("\n");
 
 		syscallNumber = k;
-		pthread_create(&thread, NULL, loopSyscall, (void *)&syscallNumber);
 
-		for(i = 0; i < 2 * 1024; ++i)
+		for(l = 0; l < sizeof(threads) / sizeof(threads[0]); ++l)
+			pthread_create(&threads[l], NULL, loopSyscall0_rand, (void *)&syscallNumber);
+
+		for(i = 0; i < 256; ++i)
 		{
 			if(sysctl(name, 4, NULL, &stackCount, NULL, 0) < 0)
 				break;
@@ -309,10 +344,12 @@ int main(int argc, char **argv)
 		//hashKernelFunctionPrint(&kernelFunctions);
 
 		syscallNumber = -1;
-		pthread_join(thread, NULL);
+		for(l = 0; l < sizeof(threads) / sizeof(threads[0]); ++l)
+			pthread_join(threads[l], NULL);
 
 		//sleep(10);
 	}
+	printf("\n");
 
 	hashKernelFunctionPrint(&kernelFunctions);
 
