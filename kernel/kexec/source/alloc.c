@@ -63,13 +63,19 @@ int kexecAllocSceUserEvent(size_t size)
 	if(r != 0)
 		return -1;
 
-	// this does not seem to need a valid fd ...
-	// no idea if it works ...
-	r = sceKernelAddUserEvent(queue, KExecChunkSizeCalulate(size));
-	if(r != 0)
+	if(globalFileDescriptor == 0) // only one fd, thus size is used for all chunks
+		globalFileDescriptor = kexecGenerateFileDescriptor(KExecChunkSizeCalulate(size));
+	if(globalFileDescriptor < 0)
 	{
 		close(queue);
 		return -2;
+	}
+
+	r = sceKernelAddUserEvent(queue, globalFileDescriptor);
+	if(r != 0)
+	{
+		close(queue);
+		return -3;
 	}
 
 	return queue;
@@ -92,7 +98,7 @@ int kexecAllocSceReadEventGlobal(size_t size)
 		return -2;
 	}
 
-	r = sceKernelAddReadEvent(queue, globalFileDescriptor, 0, NULL);
+	r = sceKernelAddReadEvent(queue, globalFileDescriptor, 5, NULL);
 	if(r != 0)
 	{
 		close(queue);

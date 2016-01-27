@@ -15,7 +15,7 @@ int kexecAllocKQueueGlobal(size_t size);
 int kexecAllocSceUserEvent(size_t size); //   no idea
 int kexecAllocSceReadEventGlobal(size_t size);
 
-#define kexecAlloc kexecAllocKQueueGlobal
+#define kexecAlloc kexecAllocSceReadEventGlobal
 
 // free
 int kexecFree(int fd);
