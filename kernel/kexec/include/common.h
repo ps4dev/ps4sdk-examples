@@ -25,6 +25,7 @@
 
 #include <inttypes.h>
 
+#include <sys/queue.h>
 #include <sys/sysproto.h>
 #include <sys/ucred.h>
 #include <sys/proc.h>
@@ -37,6 +38,7 @@
 #include <sys/param.h>
 #include <sys/user.h>
 #include <sys/sysctl.h>
+
 
 #ifdef __PS4__
 #include <kernel.h>

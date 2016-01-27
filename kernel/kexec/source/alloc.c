@@ -3,6 +3,11 @@
 
 static int globalFileDescriptor;
 
+int kexecGetGlobalFileDescriptor()
+{
+	return globalFileDescriptor;
+}
+
 int kexecGenerateFileDescriptor(int number)
 {
 	int t[KExecFileDescriptorMax];
@@ -21,7 +26,7 @@ int kexecGenerateFileDescriptor(int number)
 		return -2;
 	}
 
-	diff = number - base - 3;
+	diff = number - base - 1;
 	if(diff < 0)
 	{
 		close(base);

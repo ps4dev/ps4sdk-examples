@@ -20,6 +20,7 @@ int kexecAllocSceReadEventGlobal(size_t size);
 // free
 int kexecFree(int fd);
 int kexecCloseGlobalIfNeeded();
+int kexecGetGlobalFileDescriptor();
 
 // Chunk size calculation control
 #define KExecChunkSizeCalulate(size) (size - 0x800) / 8
