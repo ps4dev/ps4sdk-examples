@@ -42,6 +42,7 @@
 
 #ifdef __PS4__
 #include <kernel.h>
+#include <ps4/resolve.h>
 #endif
 
 #endif

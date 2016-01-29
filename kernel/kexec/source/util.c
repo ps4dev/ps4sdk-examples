@@ -27,6 +27,31 @@ int printPrintableBytes(unsigned char *str, size_t size)
 	return 0;
 }
 
+int stringBytes(unsigned char *out, unsigned char *str, size_t size)
+{
+	int i;
+	if(str == NULL)
+		return -1;
+	for(i = 0; i < size; ++i)
+		sprintf((char *)out + i * 2, "%02X", (unsigned char)str[i]);
+	sprintf((char *)out + i * 2, "\n");
+	return 0;
+}
+
+int stringPrintableBytes(unsigned char *out, unsigned char *str, size_t size)
+{
+	int i;
+	if(str == NULL)
+		return -1;
+	for(i = 0; i < size; ++i)
+		if(isprint(str[i]))
+			sprintf((char *)out + i * 2, "%c", str[i]);
+		else
+			sprintf((char *)out + i * 2, " ");
+	sprintf((char *)out + i * 2, "\n");
+	return 0;
+}
+
 int utilServerCreate(int port, int backlog, int try, unsigned int sec)
 {
 	int server;
