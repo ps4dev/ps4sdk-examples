@@ -2,7 +2,6 @@
 #define Util_H
 
 #include <stdlib.h>
-#include <stdio.h>
 
 int printBytes(unsigned char *str, size_t size);
 int printPrintableBytes(unsigned char *str, size_t size);

@@ -45,7 +45,10 @@ int kexecGenerateFileDescriptor(int number)
 	}
 
 	if(err == 0)
+	{
 		fd = dup(base);
+		printf("genfd %i\n", fd);
+	}
 
 	for(i = 0; i < diff; ++i)
 		close(t[i]);
@@ -98,7 +101,7 @@ int kexecAllocSceReadEventGlobal(size_t size)
 		return -2;
 	}
 
-	r = sceKernelAddReadEvent(queue, globalFileDescriptor, 5, NULL);
+	r = sceKernelAddReadEvent(queue, globalFileDescriptor, 1, NULL);
 	if(r != 0)
 	{
 		close(queue);
