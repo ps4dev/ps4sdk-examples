@@ -29,38 +29,37 @@ void hookSceKernelSleep(SceKernelSleep *symbol, SceKernelSleep fn)
 	*symbol = fn;
 }
 
-PS4ResolveStatus errorhandler(char *moduleName, char *symbolName, int *module, void **symbol, PS4ResolveStatus state)
+PS4ResolveStatus errorhandler(PS4ResolveState *status)
 {
 	printf("error: %s %s %p %i %p %p %i\n",
-		moduleName, symbolName, module, *module, symbol, *symbol, state);
-	return state;
+		status->module, status->symbol, status->moduleId, *status->moduleId, status->address, *status->address, status->kernelAddress);
+	return status->status;
 }
 
-PS4ResolveStatus prehandler(char *moduleName, char *symbolName, int *module, void **symbol, PS4ResolveStatus state)
+PS4ResolveStatus prehandler(PS4ResolveState *status)
 {
 	printf("pre: %s %s %p %i %p %p %i\n",
-		moduleName, symbolName, module, *module, symbol, *symbol, state);
-	if(strcmp(symbolName, "abs") == 0) // we fail on abs resolution / call, the return of rax will be undefined
+		status->module, status->symbol, status->moduleId, *status->moduleId, status->address, *status->address, status->kernelAddress);
+	if(strcmp(status->symbol, "abs") == 0) // we fail on abs resolution / call, the return of rax will be undefined
 		return PS4ResolveStatusInterceptFailure;
-	return state;
+	return status->status;
 }
 
-PS4ResolveStatus posthandler(char *moduleName, char *symbolName, int *module, void **symbol, PS4ResolveStatus state)
+PS4ResolveStatus posthandler(PS4ResolveState *status)
 {
 	printf("post: %s %s %p %i %p %p %i\n",
-		moduleName, symbolName, module, *module, symbol, *symbol, state);
-	if(strcmp(symbolName, "sceKernelSleep") == 0) // hook sleep
-		hookSceKernelSleep((SceKernelSleep *)symbol, hookedSceKernelSleep);
-	return state;
+		status->module, status->symbol, status->moduleId, *status->moduleId, status->address, *status->address, status->kernelAddress);
+	if(strcmp(status->symbol, "sceKernelSleep") == 0) // hook sleep
+		hookSceKernelSleep((SceKernelSleep *)status->address, hookedSceKernelSleep);
+	return status->status;
 }
 
 int main(int argc, char **argv)
 {
-	int r;
+	uint64_t r = 0;
 	PS4ResolveStatus stat;
 
-	int module = 0;
-	void *symbol = NULL;
+	//int module = 0; void *symbol = NULL;
 
 	// either ps4Resolve or a call before using them in a handler or
 	// we run into an infinite loop on a resolve interception
@@ -87,7 +86,7 @@ int main(int argc, char **argv)
 	printf("%i // result of call to hooked sleep\n", sceKernelSleep(2));
 
 	// failing symbol lookup
-	printf("%i // return of failed foo lookup \n", ps4ResolveModuleAndSymbol("libkernel.sprx", "foo", &module, &symbol));
+	//printf("%i // return of failed foo lookup \n", ps4ResolveModuleAndSymbol("libkernel.sprx", "foo", &module, &symbol));
 
 	div_t d = div(128, (int)pow(3.1415, 3));
 	r = abs(d.quot + d.rem);
