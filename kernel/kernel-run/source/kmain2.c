@@ -22,22 +22,10 @@
 #include "kmain.h"
 
 // kernel functions called, in user-land function ... yay for evil voodoo Oo?!
-int kmain(int argc, char **argv)
+int kmain2(int argc, char **argv)
 {
-	char *moo = argv[0];
-
-	struct malloc_type *mt = ps4KernelDlSym("M_TEMP");
-	// please tell me how to get executable memory :P
-	void *kmoo = malloc(32, mt, M_ZERO | M_WAITOK);
-
-	// moo, don't go to the dark place ...
-	copyin(moo, kmoo, 32);
-	strcpy(kmoo, "Cows go to kernel too ...");
-	copyout(kmoo, moo, 32);
-
-	free(kmoo, mt);
-
 	RunnableInt sceSblACMgrIsVideoplayerProcess = (RunnableInt)ps4KernelDlSym("sceSblACMgrIsVideoplayerProcess");
+	ps4KernelPatchToTruthFunction((void *)sceSblACMgrIsVideoplayerProcess);
 
-	return sceSblACMgrIsVideoplayerProcess(); //see kmain2's content & return
+	return sceSblACMgrIsVideoplayerProcess(); // important notice from kernel!
 }
