@@ -8,7 +8,6 @@
 #include <math.h>
 
 #include <kernel.h>
-#include <ps4/internal/resolve.h> // used for fail demonstation
 #include <ps4/resolve.h>
 
 typedef unsigned int (*SceKernelSleep)(unsigned int seconds);
@@ -59,8 +58,6 @@ int main(int argc, char **argv)
 	uint64_t r = 0;
 	PS4ResolveStatus stat;
 
-	//int module = 0; void *symbol = NULL;
-
 	// either ps4Resolve or a call before using them in a handler or
 	// we run into an infinite loop on a resolve interception
 	//ps4Resolve((void *)strcmp);
@@ -84,9 +81,6 @@ int main(int argc, char **argv)
 	stat = ps4Resolve((void *)sceKernelSleep); // handers called, we also hook it
 	printf("%i // should be 0 - re-resolve of sceKernelSleep succeeds - also hooked\n", stat);
 	printf("%i // result of call to hooked sleep\n", sceKernelSleep(2));
-
-	// failing symbol lookup
-	//printf("%i // return of failed foo lookup \n", ps4ResolveModuleAndSymbol("libkernel.sprx", "foo", &module, &symbol));
 
 	div_t d = div(128, (int)pow(3.1415, 3));
 	r = abs(d.quot + d.rem);

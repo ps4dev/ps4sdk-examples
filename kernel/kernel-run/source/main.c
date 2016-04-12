@@ -24,13 +24,14 @@ int main(int argc, char **argv)
 	kargv[1] = NULL;
 
 	printf("uid: %zu\n", getuid());
-	// this syscall returns 0 after the first ps4KernelRun (see in a rerun process)
+	// this syscall returns 0 after the first ps4KernelRunMain (see in a rerun process)
 	// do not use this directly (just for show and tell here)
-	// use the self-patching ps4KernelRun wrapper instead
+	// use the self-patching ps4KernelRunMain wrapper instead
 	printf("sys: %i\n", syscall(SYS_ps4_kernel_run, NULL));
 
 	strcpy(moo, "Hmm ... ? *yum, grass*");
-	int r = ps4KernelRun(kmain, kargc, kargv);
+	// I will also add a ps4KernelRun(Syscall?) that uses the syscall interface instead
+	int r = ps4KernelRunMain(kmain, kargc, kargv);
 	printf("return (sceSblACMgrIsVideoplayerProcess): %i\n", r);
 	printf("moo: %s\n", moo);
 
@@ -54,7 +55,7 @@ int main(int argc, char **argv)
 		printf("%02X", ((unsigned char *)moo)[i]);
 	printf("\n");
 
-	r = ps4KernelRun(kmain2, kargc, kargv);
+	r = ps4KernelRunMain(kmain2, kargc, kargv);
 	printf("return2 (sceSblACMgrIsVideoplayerProcess): %i\n", r);
 
 	ps4KernelMemcpy(moo, sceSblACMgrIsVideoplayerProcess, 32);
@@ -62,7 +63,7 @@ int main(int argc, char **argv)
 		printf("%02X", ((unsigned char *)moo)[i]);
 	printf("\n");
 
-	r = ps4KernelRun(kmain3, kargc, kargv);
+	r = ps4KernelRunMain(kmain3, kargc, kargv);
 	printf("return3 (sceSblACMgrIsVideoplayerProcess): %i\n", r);
 
 	ps4KernelMemcpy(moo, sceSblACMgrIsVideoplayerProcess, 32);
@@ -71,6 +72,9 @@ int main(int argc, char **argv)
 	printf("\n");
 
 	free(moo); //Bye moo, you did real good :(~
+
+	 // kernel function called from userland without run
+	//printf("getnanouptime: %i\n", getnanouptime(0));
 
 	return EXIT_SUCCESS;
 }

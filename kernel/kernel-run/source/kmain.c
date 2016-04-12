@@ -41,3 +41,20 @@ int kmain(int argc, char **argv)
 
 	return sceSblACMgrIsVideoplayerProcess(); //see kmain2's content & return
 }
+
+int kmain2(int argc, char **argv)
+{
+	RunnableInt sceSblACMgrIsVideoplayerProcess = (RunnableInt)ps4KernelDlSym("sceSblACMgrIsVideoplayerProcess");
+	ps4KernelPatchToTruthFunction((void *)sceSblACMgrIsVideoplayerProcess);
+
+	return sceSblACMgrIsVideoplayerProcess(); // important notice from kernel!
+}
+
+int kmain3(int argc, char **argv)
+{
+	RunnableInt sceSblACMgrIsVideoplayerProcess = (RunnableInt)ps4KernelDlSym("sceSblACMgrIsVideoplayerProcess");
+	void *sceSblACMgrIsShellcoreProcess = ps4KernelDlSym("sceSblACMgrIsShellcoreProcess");
+	ps4KernelHookFunction((void *)sceSblACMgrIsVideoplayerProcess, sceSblACMgrIsShellcoreProcess);
+
+	return sceSblACMgrIsVideoplayerProcess();
+}
