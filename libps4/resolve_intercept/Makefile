@@ -10,6 +10,7 @@ $(error Neither PS4SDK, Ps4Sdk nor ps4sdk set)
 endif
 endif
 
-target ?= ps4_elf
+#nop
+target ?= ps4_lib_no_all
 
 include $(Ps4Sdk)/make/ps4sdk.mk

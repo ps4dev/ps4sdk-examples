@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #include <kernel.h>
-//#include <video_out.h>
 
 enum{ ModulesSize = 1024 };
 
@@ -96,7 +95,7 @@ int main(int argc, char **argv)
 	// Video (open) did still not work though
 	// Crashes on return to the browser (obviously)
 	// Also crashes on unload of libSceWebKit2 imidiately
-	// which could maybe be cought though.
+	// which could maybe be caught though.
 
 	/*
 	for(i = 0; i < moduleCount; ++i)
