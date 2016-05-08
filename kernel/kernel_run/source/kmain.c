@@ -47,8 +47,9 @@ int kmain(struct thread *td, void *uap)
 int kmain2(struct thread *td, void *uap)
 {
 	RunnableInt sceSblACMgrIsVideoplayerProcess = (RunnableInt)ps4KernelDlSym("sceSblACMgrIsVideoplayerProcess");
-	ps4KernelFunctionPatchToTruth((void *)sceSblACMgrIsVideoplayerProcess);
-
+	ps4KernelFunctionPatchToReturn((void *)sceSblACMgrIsVideoplayerProcess, 0);
+	//size_t s = 0;
+	//int r = ps4KernelAssemblerInstructionNext(sceSblACMgrIsVideoplayerProcess, &s);
 	//ps4KernThreadSetReturn0(td, sceSblACMgrIsVideoplayerProcess()); // important notice from kernel!
 	return 0;
 }
@@ -57,7 +58,7 @@ int kmain3(struct thread *td, void *uap)
 {
 	RunnableInt sceSblACMgrIsVideoplayerProcess = (RunnableInt)ps4KernelDlSym("sceSblACMgrIsVideoplayerProcess");
 	void *sceSblACMgrIsShellcoreProcess = ps4KernelDlSym("sceSblACMgrIsShellcoreProcess");
-	ps4KernelFunctionPatchToJumpTo((void *)sceSblACMgrIsVideoplayerProcess, sceSblACMgrIsShellcoreProcess);
+	ps4KernelFunctionPatchToJump((void *)sceSblACMgrIsVideoplayerProcess, sceSblACMgrIsShellcoreProcess);
 
 	//ps4KernThreadSetReturn0(td, sceSblACMgrIsVideoplayerProcess());
 	return 0;
