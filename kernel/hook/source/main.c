@@ -89,9 +89,11 @@ int main(int argc, char **argv)
 	ps4KernelMemoryCopy((void *)hook2, h2, 128);
 	printf("ps4KernelMemoryCopy: %p %p\n", hook2, h2);
 
+	// We need to do this manually for now, since llvm code
+	// does not
 	s = 12;
-	r = ps4KernelAssemblerInstructionSeek(a, &s);
-	printf("ps4KernelAssemblerInstructionSeek: %i %zu\n", r, s);
+	r = ps4KernelMachineInstructionSeek(a, &s);
+	printf("ps4KernelMachineInstructionSeek: %i %zu\n", r, s);
 
 	r = ps4KernelFunctionIsHooked(a);
 	printf("ps4KernelFunctionIsHooked: %i %p\n", r, a);
