@@ -90,7 +90,9 @@ int main(int argc, char **argv)
 	printf("ps4KernelMemoryCopy: %p %p\n", hook2, h2);
 
 	// We need to do this manually for now, since llvm code
-	// does not
+	// does not currently run in kernel space. Idealy this
+	// will not be needed and the call below (to hook) does
+	// will not require a size argument.
 	s = 12;
 	r = ps4KernelMachineInstructionSeek(a, &s);
 	printf("ps4KernelMachineInstructionSeek: %i %zu\n", r, s);
@@ -103,6 +105,7 @@ int main(int argc, char **argv)
 
 	sleep(2);
 
+	// Will detect size automatically, once llvm is debugged
 	r = ps4KernelFunctionHookCreateSized(&hh, a, h2, s);
 	printf("ps4KernelFunctionHookCreateSized: %i %p %p %p %p %zu\n", r, &hh, hh, a, h2, s);
 
