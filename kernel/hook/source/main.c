@@ -34,7 +34,7 @@ int hook1(void *td, Ps4KernFunctionHookArgument *uap)
 
 int hook2(void *td, Ps4KernFunctionHookArgument *uap)
 {
-	// unroot
+	// Blocks hooks added after this one
 	uap->arguments->rax = 0; // return OK
 	return PS4_KERN_FUNCTION_HOOK_RETURN; // intercept call
 }

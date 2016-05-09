@@ -5,19 +5,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
+#include <inttypes.h>
+
 #include <unistd.h>
+
 #include <sys/syscall.h>
 
 #include <ps4/kernel.h>
 
 #include "kmain.h"
 
-
 int main(int argc, char **argv)
 {
 	char *moo = malloc(32); // A moo!! :D
 	int i;
-	uint64_t ret;
+	int64_t ret;
 
 	printf("uid: %zu\n", getuid());
 	// this syscall returns 0 after the first ps4KernelRunMain (see in a rerun process)
@@ -28,8 +31,7 @@ int main(int argc, char **argv)
 	strcpy(moo, "Hmm ... ? *yum, grass*");
 	// I will also add a ps4KernelRun(Syscall?) that uses the syscall interface instead
 	int r = ps4KernelExecute((void *)kmain, moo, &ret, NULL);
-	printf("r (sceSblACMgrIsVideoplayerProcess): %i\n", r);
-	printf("return (sceSblACMgrIsVideoplayerProcess): %i\n", ret);
+	printf("return (sceSblACMgrIsVideoplayerProcess): %i %"PRId64"\n", r, ret);
 	printf("moo: %s\n", moo);
 	printf("moo: %p\n", moo);
 
@@ -53,16 +55,16 @@ int main(int argc, char **argv)
 		printf("%02X", ((unsigned char *)moo)[i]);
 	printf("\n");
 
-	r = ps4KernelExecute((void *)kmain2, moo, NULL, NULL);
-	printf("return2 (sceSblACMgrIsVideoplayerProcess): %i\n", r);
+	r = ps4KernelExecute((void *)kmain2, moo, &ret, NULL);
+	printf("return2 (sceSblACMgrIsVideoplayerProcess): %i %"PRId64"\n", r, ret);
 
 	ps4KernelMemoryCopy(sceSblACMgrIsVideoplayerProcess, moo, 32);
 	for(i = 0; i < 32; ++i)
 		printf("%02X", ((unsigned char *)moo)[i]);
 	printf("\n");
 
-	r = ps4KernelExecute((void *)kmain3, moo, NULL, NULL);
-	printf("return3 (sceSblACMgrIsVideoplayerProcess): %i\n", r);
+	r = ps4KernelExecute((void *)kmain3, moo, &ret, NULL);
+	printf("return3 (sceSblACMgrIsVideoplayerProcess): %i %"PRId64"\n", r, ret);
 
 	ps4KernelMemoryCopy(sceSblACMgrIsVideoplayerProcess, moo, 32);
 	for(i = 0; i < 32; ++i)
