@@ -13,6 +13,7 @@
 #include <ps4/kernel.h>
 #include <ps4/kern.h>
 #include <ps4/payload.h>
+#include <ps4/machine.h>
 
 #include <float.h>
 
@@ -71,6 +72,24 @@ void printHook(Ps4KernelFunctionHook *h)
 		printf("-> %p\n", hook[i]);
 }
 
+int hookMachineInstructionNext(void *base, size_t *next)
+{
+	void *m = malloc(128);
+	ps4KernelMemoryCopy(base, m, 128);
+	int r = ps4MachineInstructionSeek(m, next);
+	free(m);
+	return r;
+}
+
+int hookMachineInstructionSeek(void *base, size_t *offset)
+{
+	void *m = malloc(128);
+	ps4KernelMemoryCopy(base, m, 128);
+	int r = ps4MachineInstructionSeek(m, offset);
+	free(m);
+	return r;
+}
+
 int main(int argc, char **argv)
 {
 	void *a = ps4KernelDlSym("sceSblACMgrIsJitApplicationProcess");
@@ -94,8 +113,8 @@ int main(int argc, char **argv)
 	// will not be needed and the call below (to hook) does
 	// will not require a size argument.
 	s = 12;
-	r = ps4KernelMachineInstructionSeek(a, &s);
-	printf("ps4KernelMachineInstructionSeek: %i %zu\n", r, s);
+	r = hookMachineInstructionSeek(a, &s);
+	printf("hookMachineInstructionSeek: %i %zu\n", r, s);
 
 	r = ps4KernelFunctionIsHooked(a);
 	printf("ps4KernelFunctionIsHooked: %i %p\n", r, a);
