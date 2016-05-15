@@ -74,5 +74,5 @@ int main(int argc, char **argv)
 	int r = kern_sys_write(ps4KernThreadCurrent(), &wargs);
 	ps4KernMemoryFree(memory);
 
-	return EXIT_SUCCESS;
+	return r;
 }
