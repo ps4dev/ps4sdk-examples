@@ -11,6 +11,5 @@ endif
 endif
 
 target ?= ps4_elf
-Cf := -Wno-zero-length-array #sysproto.h
 
 include $(Ps4Sdk)/make/ps4sdk.mk

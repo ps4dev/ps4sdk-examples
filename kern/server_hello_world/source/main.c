@@ -11,19 +11,21 @@
 #include <sys/systm.h>
 #include <sys/syscallsubr.h>
 
-#undef offsetof
-#include <ps4/kernel.h>
 #include <ps4/kern.h>
 
 #define SERVER_PORT 5057
-#define SERVER_BACKLOG 10
 
 int main(int argc, char **argv)
 {
 	// send this elf to 5054, connect, see connection get closed
 	// send this elf to 5055, close browser, connect, see connection get closed ^^
-	struct thread *td = ps4KernThreadCurrent();
-	int client = ps4KernUtilServerCreateSingleAccept(td, SERVER_PORT); //other versions exits
-	kern_close(td, client);
+	struct thread *td;
+	int client;
+
+	td = ps4KernThreadCurrent();
+	client = ps4KernUtilServerCreateSingleAccept(td, SERVER_PORT);
+	ps4KernUtilSocketPrint(td, client, "Hello world from your ps4 kernel, ps4sdk and hito <3\n{main:%p, argc:%i, argv[0]:%s}\n", main, argc, argv[0]);
+	ps4KernUtilSocketClose(td, client);
+
 	return 0;
 }
