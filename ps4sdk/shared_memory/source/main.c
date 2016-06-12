@@ -8,21 +8,30 @@ int main(int argc, char **argv)
 {
 	 //shm interface to keep stable memory between reloads, if needed
 	Ps4MemoryShared *foo, *bar, *baz;
-	ps4MemorySharedOpen(&foo, "/foo", 0x6000 * 3);
-	ps4MemorySharedOpen(&bar, "/bar", 0x5000 * 2);
-	ps4MemorySharedOpen(&baz, "/foo", 0); // reopen
+	void *foom;
+	void *barm;
+	void *bazm;
+	size_t s;
+
+
+	ps4MemorySharedOpen(&foo, 0x6000 * 3, "/foo");
+	ps4MemorySharedOpen(&bar, 0x5000 * 2, "/bar");
+	ps4MemorySharedOpen(&baz, 0, "/foo"); // reopen
 
 	printf("Ps4MemoryShared *foo %p\n", foo);
 	printf("Ps4MemoryShared *bar %p\n", bar);
 	printf("Ps4MemoryShared *baz %p\n", baz);
 
-	printf("ps4MemorySharedSize *foo %p\n", ps4MemorySharedGetSize(foo));
-	printf("ps4MemorySharedSize *bar %p\n", ps4MemorySharedGetSize(bar));
-	printf("ps4MemorySharedSize *baz %p\n", ps4MemorySharedGetSize(baz));
+	ps4MemorySharedGetSize(foo, &s);
+	printf("ps4MemorySharedSize *foo %p\n", s);
+	ps4MemorySharedGetSize(bar, &s);
+	printf("ps4MemorySharedSize *bar %p\n", s);
+	ps4MemorySharedGetSize(baz, &s);
+	printf("ps4MemorySharedSize *baz %p\n", s);
 
-	void *foom = ps4MemorySharedGetAddress(foo);
-	void *barm = ps4MemorySharedGetAddress(bar);
-	void *bazm = ps4MemorySharedGetAddress(baz);
+	ps4MemorySharedGetAddress(foo, &foom);
+ 	ps4MemorySharedGetAddress(bar, &barm);
+ 	ps4MemorySharedGetAddress(baz, &bazm);
 
 	printf("%s\n", foom);
 	printf("%s\n", barm);
@@ -41,10 +50,11 @@ int main(int argc, char **argv)
 	printf("%s\n", bazm);
 
 	ps4MemorySharedClose(bar); // leave /bar data
-	ps4MemorySharedOpen(&bar, "/bar", 0x4000 * 6);
+	ps4MemorySharedOpen(&bar, 0x4000 * 6, "/bar");
 	printf("Ps4MemoryShared *bar %p\n", bar);
-	printf("ps4MemorySharedSize *bar %p\n", ps4MemorySharedGetSize(bar));
-	barm = ps4MemorySharedGetAddress(bar);
+	ps4MemorySharedGetSize(bar, &s);
+	printf("ps4MemorySharedSize *bar %p\n", s);
+	ps4MemorySharedGetAddress(bar, &barm);
 	printf("void *barm %p\n", barm);
 	printf("%s\n", barm); // /bar data still there
 	strcpy(barm, "I am yyy");
@@ -52,10 +62,11 @@ int main(int argc, char **argv)
 	ps4MemorySharedUnlink(bar); // remove /bar data
 
 	ps4MemorySharedClose(foo); // leave data
-	ps4MemorySharedOpen(&bar, "/foo", 0); // open new alias
+	ps4MemorySharedOpen(&bar, 0, "/foo"); // open new alias
 	printf("Ps4MemoryShared *bar %p\n", bar);
-	printf("ps4MemorySharedSize *bar %p\n", ps4MemorySharedGetSize(bar));
-	barm = ps4MemorySharedGetAddress(bar);
+	ps4MemorySharedGetSize(bar, &s);
+	printf("ps4MemorySharedSize *bar %p\n", s);
+	ps4MemorySharedGetAddress(bar, barm);
 	printf("void *barm %p\n", barm);
 	printf("%s\n", barm); // /foo data still there in "bar" struct
 	strcpy(barm, "I am xxx");

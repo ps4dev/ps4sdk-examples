@@ -6,20 +6,21 @@
 int main(int argc, char **argv)
 {
 	Ps4MemoryProtected *pm;
-	ps4MemoryProtectedCreate(&pm, 1234);
-	unsigned char *w = ps4MemoryProtectedGetWritableAddress(pm);
-	unsigned char *e = ps4MemoryProtectedGetExecutableAddress(pm);
+	unsigned char *w;
+	unsigned char *e;
 	int i;
+
+	ps4MemoryProtectedCreate(&pm, 1234);
+	ps4MemoryProtectedGetWritableAddress(pm, (void **)&w);
+	ps4MemoryProtectedGetExecutableAddress(pm, (void **)&e);
 
 	for(i = 0; i < 1234; i += 2)
 	{
 		w[i] = 0xeb; // jump
-		w[i + 1] = 0xfe; //to w[i - 2]
+		w[i + 1] = 0xfe; // to self (loop infinitely)
 	}
-	w[0] = 0xeb; // jump
-	w[1] = 0xfc; // to this (w[0]) loop infinitely
 
-	// jump sled + infinite jump loop
+	// jump somewhere "even" => infinite jump loop
 	void (*run)(void) = (void (*)(void))(e + 8);
 	run();
 
