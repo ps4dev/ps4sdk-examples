@@ -13,12 +13,11 @@ Examples and prove of concepts which show something realized with ps4sdk (not ne
 ## Noteworthy
 * `freebsd/dirent` displays the fs and can be run after you use another elf to escalate your privileges
 * `ps4sdk/kernel_execute` shows how to do enter the kernel from user space on your own (it's likely less
-convenient and useful then a kernel payload, but has a use-case too). Be aware, that when your program
+convenient and useful then a kernel payload, but has a use-case too).
+* `ps4sdk/system_call_hook` shows how to temporarily hook from user space. Be aware, that when your program
 exits, your resources (all functions and data) will be gone too. Be sure to unlink these user space resources
-from the kernel! Use a kernel payload that never ends (sleep on a mutex) instead.
-* `ps4sdk/system_call_hook` shows how to temporarily hook from user space. For the reasons above,
-a kernel payload is more likely to be useful and stable for any long term attempts. See `kernel/system_call` for
-comparison
+from the kernel! A kernel payload that never ends (sleep on a mutex) is more likely to be useful and stable
+for any long term or persistent (module like) modifications. See `kernel/system_call` for comparison.
 * `kernel/system_call_hook kernel/function_hook` print the same descriptor all the time, thats correct because thats
 what happens. Press the options button to see changes. To influence the return values, use a post hook and alter
 args->returns->rax (etc.). Try the function index hook (on 5055) and restart the browser!
