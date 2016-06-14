@@ -68,8 +68,8 @@ int main(int argc, char **argv)
 	//r = ps4KernelSocketPrint(td, client, "ps4KernelDlSym sysctl_handle_64: %p\n", m);
 
 	// uses a sub-cache called ps4.kernel.symbol.lookup
-	r = ps4KernelSymbolLookup("sysctl_handle_64", &m);
-	r = ps4KernelSocketPrint(td, client, "ps4KernelSymbolLookup sysctl_handle_64: %p %i\n", m, r);
+	r = ps4KernelSymbolLookUp("sysctl_handle_64", &m);
+	r = ps4KernelSocketPrint(td, client, "ps4KernelSymbolLookUp sysctl_handle_64: %p %i\n", m, r);
 
 	m = NULL;
 	r = ps4KernelCacheGlobalGet("ps4.kernel.symbol.lookup", &m);

@@ -116,7 +116,7 @@ int main(int argc, char **argv)
     struct sysent *sy;
 	int r;
 
-	ps4ExpressionReturnOnError(ps4KernelSymbolLookup("sysent", (void **)&sy));
+	ps4ExpressionReturnOnError(ps4KernelSymbolLookUp("sysent", (void **)&sy));
 
 	if(ps4KernelIsInKernel() != PS4_OK)
 	{
