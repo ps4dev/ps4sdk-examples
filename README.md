@@ -15,15 +15,16 @@ Examples and prove of concepts which show something realized with ps4sdk (not ne
 * `ps4sdk/kernel_execute` shows how to do enter the kernel from user space on your own (it's likely less
 convenient and useful then a kernel payload, but has a use-case too).
 * `ps4sdk/system_call_hook` shows how to temporarily hook from user space. Be aware, that when your program
-exits, your resources (all functions and data) will be gone too. Be sure to unlink these user space resources
-from the kernel! A kernel payload that never ends (sleep on a mutex) is more likely to be useful and stable
+exits, your resources (all functions and data) will be gone too. **Be sure to unlink** these user space resources
+from the kernel. A kernel payload that never ends (sleep on a mutex) is more likely to be useful and stable
 for any long term or persistent (module like) modifications. See `kernel/system_call` for comparison.
-* `kernel/system_call_hook kernel/function_hook` print the same descriptor all the time, thats correct because thats
-what happens. Press the options button to see changes. To influence the return values, use a post hook and alter
-args->returns->rax (etc.). Try the function index hook (on 5055) and restart the browser!
+* `kernel/system_call_hook`, `kernel/function_hook` print the same descriptor all the time. That's not a bug,
+it's what actually happens. Press the options button to see changes. To influence the return values, use a post
+hook and alter args->returns->rax (etc.). Try the function index (rindex) hook (on 5055), close the browser,
+connect and restart the browser.
 
 ## Important
-The exploit may not always enter the kernel on the first try. Is you browser crashes,
-simply try again and its likely to work. This will be tuned in the future as much as possible.
+The exploit may not always enter the kernel on the first try. If you browser crashes,
+simply try again. It's likely to work. This will be tuned in the future as much as possible.
 Especially after you crashed your kernel, this is very common (down right normal) because the
 initial resource allocation differs.
