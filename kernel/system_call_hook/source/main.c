@@ -28,7 +28,13 @@ static Ps4KernelSocket *sock;
 
 int sysCloseHook(struct thread *td, struct close_args *uap)
 {
-	ps4KernelSocketPrint(td, sock, "pre: %i\n", uap->fd);
+	Ps4KernelSystemCallHookArgument *arg;
+	// magic - do this in the first line thou!
+	// also allows you to interrupt via return and set a return via arg
+	// maybe that should be switch around ... ? -> issue
+	ps4KernelThreadGetSecondaryReturn(td, (register_t *)&arg);
+
+	ps4KernelSocketPrint(td, sock, "pre: %p %p %i\n", arg->hookTypeCurrent, arg->number, uap->fd);
 	return PS4_KERNEL_SYSTEM_CALL_HOOK_CONTROL_CONTINUE;
 }
 
@@ -37,7 +43,7 @@ int sysCloseHookGeneric(struct thread *td, Ps4KernelSystemCallHookArgument *arg)
 	struct close_args *uap;
 	uap = (struct close_args *)arg->uap;
 
-	ps4KernelSocketPrint(td, sock, "generic: %i\n", uap->fd);
+	ps4KernelSocketPrint(td, sock, "generic: %p %p %i\n", arg->hookTypeCurrent, arg->number, uap->fd);
 	return PS4_KERNEL_SYSTEM_CALL_HOOK_CONTROL_CONTINUE;
 }
 

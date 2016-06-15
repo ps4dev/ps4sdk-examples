@@ -39,8 +39,7 @@ int snprintfHook(char *str, size_t size, const char *format, ...)
 	va_list args;
 
 	ps4KernelThreadGetCurrent(&td);
-	// !!! do not use format => strlen inf. loop => crash !!!
-	ps4KernelSocketPrint(td, sock, "%p %zu ", str, size);
+	//ps4KernelSocketPrint(td, sock, "%p %zu ", str, size);
 	va_start(args, format);
 	ps4KernelSocketPrintSizedWithArgumentList(td, sock, size, format, args);
 	va_end(args);
@@ -75,7 +74,13 @@ int printfHook(const char *format, ...)
 
 int kern_closeHook(struct thread *td, int fd)
 {
-	ps4KernelSocketPrint(td, sock, "%p %i\n", td, fd);
+	Ps4KernelFunctionHookArgument *arg;
+	// hidden-argument-jutsu - do this as the first call thou!
+	// also allows you to interrupt via return and set a return via arg
+	// maybe that should switch around ... ? -> issue
+	ps4KernelThreadGetSecondaryReturn(td, (register_t *)&arg);
+
+	ps4KernelSocketPrint(td, sock, "%p %p %i\n", td, arg->function, fd);
 	return PS4_KERNEL_FUNCTION_HOOK_CONTROL_CONTINUE;
 }
 
@@ -91,6 +96,8 @@ int indexHook(const char *s, int c)
 
 int genericHook(struct thread *td, Ps4KernelFunctionHookArgument *arg)
 {
+	// The current type returns 0,1 for now.
+	// This will be changed to the same control values observed in function hooks (need to do it in asm ...)
 	ps4KernelSocketPrint(td, sock, "Type %p:\n", arg->hookTypeCurrent);
 
 	ps4KernelSocketPrint(td, sock, "%p(%p, %p, %p, %p, %p, %p) %p\n\t => %p %p %p %p %p %p\n",
@@ -150,7 +157,7 @@ void socketPrintHook(struct thread *td, Ps4KernelSocket *s, Ps4KernelFunctionHoo
 			"\tfree: %p\n"
 			"\tmt: %p\n"
 			"\tuserArgument: %p\n"
-		"}\n",
+		"}\n"
 		"* = This is will not show per-hook runtime values due to the lock-less design.\n",
 		arg,
 		arg->function,
